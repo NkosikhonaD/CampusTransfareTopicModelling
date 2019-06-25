@@ -33,7 +33,7 @@ def prepare_text_for_lda(text):
 
 def prepare_data():
     motivation_label_list = []
-    with open("C:\\Users\\DlaminiN3\\Desktop\\work_research\\merged_raw.csv") as fl:
+    with open("merged_raw.csv") as fl:
         for line in fl:
             field = line.split(";")
             motivation = ""
@@ -51,50 +51,57 @@ def prepare_data():
             line = current_line+","+label
             motivation_label_list.append(line)
 
-    with open("C:\\Users\\DlaminiN3\\Desktop\\work_research\\merged_normalized.csv",'a+') as file_write:
+    with open("merged_normalized.csv",'a+') as file_write:
         for line in motivation_label_list:
             file_write.write(line+'\n')
+def convert_to_int():
+    story_labels= []
+    data_story = []
+    with open("merged_normalized.csv",'r') as f:
+        for line in f:
+            outcome = line.split(',')
+            label = outcome[1]
+            story = outcome[0]
 
+            if(label[0].lower()=='a'):
+
+               story_labels.append(story+","+str(1))
+
+            else:
+                if (label[0].lower()=='d'):
+                    story_labels.append(story + "," + str(0))
+                else:
+                    story_labels.append(story+","+label)
+    with open("merged_normalized_label.csv",'a+') as f:
+        for line in story_labels:
+            f.write(line+'\n')
 def train_model():
 
-    data = pd.read_csv("C:\\Users\\DlaminiN3\\Desktop\\work_research\\merged_normalized.csv",encoding='latin-1')
+    data = pd.read_csv("merged_normalized_label.csv",encoding='latin-1')
     data.head()
     data.describe()
-    reg = LinearRegression()
+
 
     labels = data['Outcome']
 
     train1 = data.drop(['Outcome'],axis=1)
-    print(train1.shape)
-    print(labels.shape)
+    data.head()
+    x_train, x_test,y_train,y_test = train_test_split(data[],labels,test_size=0.10,random_state=0)
 
-    x_train, x_test,y_train,y_test = train_test_split(train1,labels,test_size=0.10,random_state=2)
-    #print(len(labels))
-    #print(len(train1))
     count_vector = CountVectorizer()
     x_train_counts = count_vector.fit_transform(x_train)
-    x_test_counts = count_vector.fit_transform(x_test)
-    x_test_counts = count_vector.fit_transform(x_test)
-    y_train_counts=count_vector.fit_transform(y_train)
-    y_test_counts=count_vector.fit_transform(y_test)
-    print(x_train_counts.shape)
-    print(y_train_counts.shape)
 
+    x_test_counts = count_vector.fit_transform(x_test)
 
-    #data.reshape((999, 1)) data.values.reshape
 
     tfidf_transformer = TfidfTransformer()
-    x_train_tfidf=tfidf_transformer.fit_transform(x_train_counts)
-    x_test_tfidf =tfidf_transformer.fit_transform(x_test_counts)
-    y_train_tfidf=tfidf_transformer.fit_transform(y_train_counts)
-    y_test_tfidf=tfidf_transformer.fit_transform(y_test_counts)
-    print(x_train_tfidf.shape)
-    print(y_train_tfidf.shape)
+    x_train_tfidf = tfidf_transformer.fit_transform(x_train_counts)
+    x_test_tfidf = tfidf_transformer.fit_transform(x_test_counts)
 
-    #clf = MultinomialNB().fit(x_train_tfidf, y_train_tfidf)
-    #reg.fit(x_train_tfidf,y_train_counts)
-    #reg.score(x_test_tfidf,y_test_counts)
+    clf = MultinomialNB().fit(x_train_tfidf, y_train)
+    #reg.score(x_test_tfidf,y_test)
 #prepare_data()
+#convert_to_int()
 train_model()
 
 
