@@ -1,9 +1,14 @@
 import numpy as np
 import nltk
 from gensim.utils import tokenize
+from sklearn.preprocessing import LabelEncoder
 from nltk.corpus import wordnet as wn
 from nltk.stem.wordnet import WordNetLemmatizer
+from sklearn.feature_extraction.text import TfidfVectorizer
 import pandas as pd
+from sklearn import model_selection, naive_bayes, svm
+from sklearn.metrics import accuracy_score
+
 import matplotlib.pyplot as plt
 import seaborn as sns
 import mpl_toolkits
@@ -57,11 +62,16 @@ def prepare_data():
 def convert_to_int():
     story_labels= []
     data_story = []
+    label = "1"
+    story="of"
     with open("merged_normalized.csv",'r') as f:
         for line in f:
             outcome = line.split(',')
-            label = outcome[1]
-            story = outcome[0]
+            try:
+                label = outcome[1]
+                story = outcome[0]
+            except:
+                continue
 
             if(label[0].lower()=='a'):
 
@@ -70,38 +80,43 @@ def convert_to_int():
             else:
                 if (label[0].lower()=='d'):
                     story_labels.append(story + "," + str(0))
-                else:
-                    story_labels.append(story+","+label)
     with open("merged_normalized_label.csv",'a+') as f:
         for line in story_labels:
             f.write(line+'\n')
 def train_model():
 
-    data = pd.read_csv("merged_normalized_label.csv",encoding='latin-1')
+    data = pd.read_csv("merged_normalized_label.csv",names=["Story","Outcome"],encoding='latin-1')
     data.head()
     data.describe()
+    #print(data.columns.tolist())
 
+   #labels = data['Outcome']
 
-    labels = data['Outcome']
-
-    train1 = data.drop(['Outcome'],axis=1)
+    #data = data.drop(['Outcome'],axis=1)
+    data['Story'].dropna(inplace=True)
     data.head()
-    x_train, x_test,y_train,y_test = train_test_split(data[],labels,test_size=0.10,random_state=0)
+    #train1.head()
+    x_train, x_test,y_train,y_test = train_test_split(data['Story'],data['Outcome'],test_size=0.3)
 
-    count_vector = CountVectorizer()
-    x_train_counts = count_vector.fit_transform(x_train)
+    Encoder = LabelEncoder()
+    y_train = Encoder.fit_transform(y_train)
+    y_test = Encoder.fit_transform(y_test)
 
-    x_test_counts = count_vector.fit_transform(x_test)
+    Tfidf_vect = TfidfVectorizer(max_features=5000)
+    Tfidf_vect.fit(data['Story'])
 
+    x_train_tfidf = Tfidf_vect.transform(x_train)
 
-    tfidf_transformer = TfidfTransformer()
-    x_train_tfidf = tfidf_transformer.fit_transform(x_train_counts)
-    x_test_tfidf = tfidf_transformer.fit_transform(x_test_counts)
+    x_test_tfidf = Tfidf_vect.transform(x_test)
+    print(Tfidf_vect.vocabulary_)
+    print(x_train_tfidf)
+    Naive = naive_bayes.MultinomialNB()
+    Naive.fit(x_train_tfidf,y_train)
 
-    clf = MultinomialNB().fit(x_train_tfidf, y_train)
-    #reg.score(x_test_tfidf,y_test)
-#prepare_data()
-#convert_to_int()
+    predict_NB= Naive.predict(x_test_tfidf)
+
+    print("Accuracy of Naive ", accuracy_score(predict_NB,y_test))
+
 train_model()
 
 
